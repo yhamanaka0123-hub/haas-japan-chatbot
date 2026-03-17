@@ -4,6 +4,7 @@ import type { Chunk } from './types'
 import { ChunksContext } from './context/ChunksContext'
 import SiteNav from './components/SiteNav'
 import SiteFooter from './components/SiteFooter'
+import ChatWidget from './components/ChatWidget'
 import Home from './pages/Home'
 import Profiles from './pages/Profiles'
 import Curriculum from './pages/Curriculum'
@@ -41,6 +42,7 @@ export default function App() {
           </Routes>
         </main>
         <SiteFooter />
+        <ChatWidget />
       </HashRouter>
     </ChunksContext.Provider>
   )

@@ -1,68 +1,6 @@
-import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import type { Message } from '../types'
-import { SearchIndex } from '../lib/search'
-import { streamAnswer } from '../lib/claude'
-import { useChunks } from '../context/ChunksContext'
-import CategoryButtons from '../components/CategoryButtons'
-import ChatWindow from '../components/ChatWindow'
-import InputBar from '../components/InputBar'
-import Header from '../components/Header'
-
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string | undefined
-
-function dedupSources(chunks: ReturnType<typeof useChunks>['chunks']) {
-  const seen = new Set<string>()
-  return chunks
-    .filter(c => { if (seen.has(c.url)) return false; seen.add(c.url); return true })
-    .map(c => ({ url: c.url, title: c.title.replace(/ \(Part \d+\)$/, '') }))
-}
 
 export default function Home() {
-  const { chunks, ready } = useChunks()
-  const [searchIndex, setSearchIndex] = useState<SearchIndex | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [loading, setLoading] = useState(false)
-  const [category, setCategory] = useState('')
-  const apiKey = API_KEY ?? ''
-
-  // Build index once chunks are ready
-  if (ready && chunks.length > 0 && !searchIndex) {
-    setSearchIndex(new SearchIndex(chunks))
-  }
-
-  const handleSubmit = useCallback(async (question: string) => {
-    if (!searchIndex || loading) return
-    const userMsg: Message = { id: `u-${Date.now()}`, role: 'user', content: question }
-    setMessages(prev => [...prev, userMsg])
-    setLoading(true)
-
-    const results = searchIndex.search(question, 5, category || undefined)
-    if (results.length === 0) {
-      setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: '申し訳ありませんが、この質問に関する情報はサイトで見つかりませんでした。', sources: [], noInfo: true }])
-      setLoading(false)
-      return
-    }
-
-    const topChunks = results.map(r => r.chunk)
-    const sources = dedupSources(topChunks)
-
-    if (!apiKey) {
-      setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: '⚠️ Gemini API キーが設定されていません。\n\n関連するページが見つかりました：', sources }])
-      setLoading(false)
-      return
-    }
-
-    const context = topChunks.map(c => `【${c.title}】\n${c.content}`).join('\n\n---\n\n')
-    const assistantId = `a-${Date.now()}`
-    setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '', sources, streaming: true }])
-
-    await streamAnswer(question, context, apiKey,
-      chunk => setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: m.content + chunk } : m)),
-      () => { setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, streaming: false } : m)); setLoading(false) },
-      err => { setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: `エラーが発生しました: ${err}`, streaming: false } : m)); setLoading(false) }
-    )
-  }, [searchIndex, loading, category, apiKey])
 
   return (
     <>
@@ -116,32 +54,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Chatbot */}
-      <section className="chatbot-section" id="chatbot">
-        <div className="chatbot-section__header">
-          <div className="chatbot-section__label section-label">
-            <span className="label-micro">02 / AI Assistant</span>
-            <div className="section-label__line" />
-          </div>
-          <div className="chatbot-section__intro">
-            <p>サイトの情報をもとに、Haas Japanチャットボットが日本語でお答えします。</p>
-          </div>
-        </div>
-        <div className="chatbot-wrapper">
-          <div className="app">
-            <Header />
-            <CategoryButtons active={category} onChange={setCategory} />
-            <ChatWindow messages={messages} loading={loading} />
-            <InputBar onSubmit={handleSubmit} disabled={!ready || loading} />
-          </div>
-        </div>
-      </section>
-
       {/* Page links */}
       <section className="site-section">
         <div className="section-grid">
           <div className="section-label">
-            <span className="label-micro">03 / Explore</span>
+            <span className="label-micro">02 / Explore</span>
             <div className="section-label__line" />
           </div>
           <div className="article-list" style={{ gridColumn: '3 / 12' }}>
