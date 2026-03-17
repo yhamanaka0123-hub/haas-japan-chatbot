@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+data/
+
+# Node / Vite
+chatbot/node_modules/
+chatbot/dist/
+chatbot/.env.local
+chatbot/.env*.local
